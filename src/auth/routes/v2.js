@@ -2,11 +2,13 @@
 
 const fs = require('fs');
 const express = require('express');
-const Collection = require('../models/data-collection.js');
+const Collection = require('../models/data-collection');
 
 const router = express.Router();
-
+const bearerAuth = require('../middleware/bearer.js')
+const permissions = require('../middleware/acl.js')
 const models = new Map();
+
 
 router.param('model', (req, res, next) => {
   const modelName = req.params.model;
@@ -15,6 +17,7 @@ router.param('model', (req, res, next) => {
     next();
   } else {
     const fileName = `${__dirname}/../models/${modelName}/model.js`;
+    // console.log(fs.existsSync(`${__dirname}/../models`));
     if (fs.existsSync(fileName)) {
       const model = require(fileName);
       models.set(modelName, new Collection(model));
@@ -27,11 +30,11 @@ router.param('model', (req, res, next) => {
   }
 });
 
-router.get('/:model', handleGetAll);
-router.get('/:model/:id', handleGetOne);
-router.post('/:model', handleCreate);
-router.put('/:model/:id', handleUpdate);
-router.delete('/:model/:id', handleDelete);
+router.get('/:model',bearerAuth, handleGetAll);
+router.get('/:model/:id',bearerAuth,permissions('delete'), handleGetOne);
+router.post('/:model',bearerAuth,permissions('create'), handleCreate);
+router.put('/:model/:id',bearerAuth ,permissions('update'),handleUpdate);
+router.delete('/:model/:id',bearerAuth,permissions('delete'), handleDelete);
 
 async function handleGetAll(req, res) {
   let allRecords = await req.model.get();
